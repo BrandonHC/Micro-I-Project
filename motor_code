@@ -1,0 +1,22 @@
+int enA = 5;  // Enable pin for Motor A
+int in1 = 6;  // Control pin 1 for Motor A
+int in2 = 7;  // Control pin 2 for Motor A
+
+void setup() {
+  pinMode(enA, OUTPUT);
+  pinMode(in1, OUTPUT);
+  pinMode(in2, OUTPUT);
+}
+
+void loop() {
+  // Rotate the motor in one direction at a medium speed
+  digitalWrite(in1, HIGH);
+  digitalWrite(in2, LOW);
+  analogWrite(enA, 200);  // Adjust for desired speed (0-255)
+
+  delay(1000);  // Rotate for 1 second
+
+  // Stop the motor
+  analogWrite(enA, 0);
+  delay(1000);  // Wait for 1 second
+}
