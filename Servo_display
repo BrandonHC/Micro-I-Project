@@ -1,0 +1,60 @@
+#include <Servo.h>
+
+Servo myservo; // create servo object to control servo
+int encoderPinA = 2; // define the input pin for encoder channel A
+int encoderPinB = 3; // define the input pin for encoder channel B
+int switchPin = 4;  // define the input pin for the encoder switch
+int encoderPos = 0; // variable to store the encoder position
+int lastEncoded = 0;
+int switchState = HIGH;  // variable to store the switch state
+int lastSwitchState = HIGH;  // variable to store the previous switch state
+
+void setup() {
+  myservo.attach(9); // attach the servo on pin 9 to the servo object
+  myservo.write(90); // set the initial servo position to 90 degrees
+
+  pinMode(encoderPinA, INPUT);
+  pinMode(encoderPinB, INPUT);
+  pinMode(switchPin, INPUT_PULLUP); // configure switch pin with internal pull-up resistor
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Read the switch state
+  switchState = digitalRead(switchPin);
+
+  // Check for a change in the switch state
+  if (switchState != lastSwitchState) {
+    if (switchState == LOW) {
+      // The switch is pressed
+      // Add your code for handling the switch press here
+    }
+  }
+
+  lastSwitchState = switchState; // Save the current switch state for the next iteration
+
+  // Read the encoder state
+  int MSB = digitalRead(encoderPinA);
+  int LSB = digitalRead(encoderPinB);
+  int encoded = (MSB << 1) | LSB;
+  int sum = (lastEncoded << 2) | encoded;
+
+  // Update encoder position based on the state change
+  if (sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) {
+    encoderPos++;
+  } else if (sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000) {
+    encoderPos--;
+  }
+
+  lastEncoded = encoded; // Save the current encoder state for the next iteration
+
+  // Example: Move the servo based on encoder position
+  int targetPos = map(encoderPos, 0, 100, 0, 180);
+  myservo.write(targetPos);
+
+  // Your additional code can go here
+
+  // For example, you might want to print the encoder position to the Serial Monitor:
+  Serial.print("Encoder Position: ");
+  Serial.println(encoderPos);
+}
