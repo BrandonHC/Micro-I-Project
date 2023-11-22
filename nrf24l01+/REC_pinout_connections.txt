@@ -1,0 +1,8 @@
+NRF24L01+ -> PIC16F1829
+* GND -> GND
+* VCC -> VDD
+* CE -> RC6
+* CSN -> RC3
+* SCK -> RB6
+* MOSI -> RB4
+* MISO -> RC7
