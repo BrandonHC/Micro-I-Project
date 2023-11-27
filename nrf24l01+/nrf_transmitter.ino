@@ -4,7 +4,7 @@
 
 RF24 radio(7, 8); // CE, CSN
 
-const byte address[6] = "00001";
+const byte address[6] = {0xe1, 0xf0, 0xf0, 0xf0, 0xf0}; //"00001"
 
 void setup() {
   radio.begin();
@@ -14,7 +14,7 @@ void setup() {
 }
 
 void loop() {
-  const char text[] = "PIC16F1829";
-  radio.write(&text, sizeof(text));
+  double origin[2] = { 29.581607955892935, -98.6202546046463 };
+  radio.write(&origin, sizeof(origin));
   delay(1000);
 }
