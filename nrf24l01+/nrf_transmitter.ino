@@ -6,27 +6,29 @@
 RF24 radio(7, 8); // CE, CSN
 SoftwareSerial gpsSerial(0, 1); // RX, TX
 
-const byte address[6] = {0xe1, 0xf0, 0xf0, 0xf0, 0xf0}; //"00001"
+const byte address[6] = {0xe1, 0xf0, 0xf0, 0xf0, 0xf0};
 double origin[2] = { 0, 0 };
 
-void setup() { //nanofarads
-  Serial.begin(9600);
-  
+void setup() {
+  Serial.begin(9600);  
   radio.begin();
   radio.openWritingPipe(address);
   radio.setPALevel(RF24_PA_HIGH);
   radio.stopListening();
-
   gpsSerial.begin(9600);
 }
 
 void loop() {
-  if (gpsSerial.available() > 0) {
+  //Serial.println("GPS Available State: " + String(gpsSerial.available()));
+  
+  if (gpsSerial.available()) {
     // Read a line from the GPS module
     String line = gpsSerial.readStringUntil('\n');
+    Serial.println(line); //GPGGA or GPGLL or GPRMC (GPGLL is accurate)
+    //GPRMC is accurate
 
     // Check if the line is a valid NMEA sentence
-    if (line.startsWith("$GPGGA")) {
+    if (line.startsWith("$GPGGA")) { //was GPGGA
       // Parse the NMEA sentence
       String values[15];
       int i = 0;
@@ -62,8 +64,10 @@ void loop() {
 
       origin[0] = latitude;
       origin[1] = longitude;
+
+      //Serial.println("Target [Latitude]: " + String(latitude));
+      //Serial.println("Target [Longitude]: " + String(longitude));
       }
-    }
+    }   
   radio.write(&origin, sizeof(origin));
-  delay(1000);
 }
