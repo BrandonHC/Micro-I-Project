@@ -42,21 +42,15 @@ void setup() {
 
   radio.begin();
   radio.openReadingPipe(0, address);
-  radio.setPALevel(RF24_PA_MIN);
+  radio.setPALevel(RF24_PA_HIGH); //low?
   radio.startListening();
 
   gpsSerial.begin(9600);
 }
 
 void loop() {
-  Serial.println("test1");
-  delay(1000);
-
-  Serial.println(radio.available());
   if(radio.available()) {
     double p2Coordinates[2];
-
-    Serial.println("GPS AVAILABLE?: " + gpsSerial.available());
     if(gpsSerial.available() > 0) {
       // Read a line from the GPS module
       String line = gpsSerial.readStringUntil('\n');
@@ -79,23 +73,19 @@ void loop() {
         String latitudeStr = values[2]; // Extract latitude and longitude
         String longitudeStr = values[4];
   
-        float latitudeDegrees = latitudeStr.substring(0, 2).toFloat(); // Convert latitude to Degrees and Decimal Degrees
-        float latitudeMinutes = latitudeStr.substring(2).toFloat();
-        float latitude = latitudeDegrees + (latitudeMinutes / 60.0);
+        double latitudeDegrees = latitudeStr.substring(0, 2).toDouble(); // Convert latitude to Degrees and Decimal Degrees
+        double latitudeMinutes = latitudeStr.substring(2).toDouble();
+        double latitude = latitudeDegrees + (latitudeMinutes / 60.0);
   
-        float longitudeDegrees = longitudeStr.substring(0, 3).toFloat(); // Convert longitude to Degrees and Decimal Degrees
-        float longitudeMinutes = longitudeStr.substring(3).toFloat();
-        float longitude = longitudeDegrees + (longitudeMinutes / 60.0);
+        double longitudeDegrees = longitudeStr.substring(0, 3).toDouble(); // Convert longitude to Degrees and Decimal Degrees
+        double longitudeMinutes = longitudeStr.substring(3).toDouble();
+        double longitude = longitudeDegrees + (longitudeMinutes / 60.0);
   
         String longitudeHemisphere = values[5]; // Determine the hemisphere for longitude (W or E)
   
         if (longitudeHemisphere == "W")
           longitude = -longitude; // Make longitude negative for western hemisphere
       
-        Serial.print("Latitude: ");
-        Serial.println(latitude, 6);  // Print with 6 decimal places
-        Serial.print("Longitude: ");
-        Serial.println(longitude, 6); // Print with 6 decimal places
         p1Coordinates[0] = latitude;
         p1Coordinates[1] = longitude;
       } 
@@ -109,5 +99,6 @@ void loop() {
     targetAngle = angleFromCoordinate(convToRadian(p1Coordinates[0]), convToRadian(p1Coordinates[1]), convToRadian(p2Coordinates[0]), convToRadian(p2Coordinates[1]));
 
     Serial.println("Angle: " + String(targetAngle));
+    Serial.println();
   }
 }
