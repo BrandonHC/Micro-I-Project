@@ -22,7 +22,6 @@ double convToRadian(double degNum) {
 }
 
 double angleFromCoordinate(double lat1, double long1, double lat2, double long2) {
-
     double dLon = (long2 - long1);
 
     double y = sin(dLon) * cos(lat2);
