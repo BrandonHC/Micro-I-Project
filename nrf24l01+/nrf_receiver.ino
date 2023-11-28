@@ -3,15 +3,14 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 
-static const uint32_t GPSBaud = 9600;
 RF24 radio(7, 8); // CE, CSN
-
 SoftwareSerial gpsSerial(0, 1); // RX, TX
 
 const byte address[6] = {0xe1, 0xf0, 0xf0, 0xf0, 0xf0}; //"00001"
-
 double p1Coordinates[2] = { 0, 0 }; //for now, will write to class later.
+double p1Coordiates[2] = { 0, 0 };
 double targetAngle, xDist, yDist;
+
 
 double convToDegrees(double radNum) {
   return (radNum * (180/M_PI));
@@ -27,7 +26,7 @@ double angleFromCoordinate(double lat1, double long1, double lat2, double long2)
     double y = sin(dLon) * cos(lat2);
     double x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon);
 
-    double brng = atan2(y, x);
+    double brng = atan2(y, x); //bearing angle (radians)
 
     brng = convToDegrees(brng);
     brng = fmod((brng + 360), 360);
@@ -38,21 +37,25 @@ double angleFromCoordinate(double lat1, double long1, double lat2, double long2)
 
 void setup() {
   Serial.begin(9600);  
-
+  gpsSerial.begin(9600);
+  
   radio.begin();
   radio.openReadingPipe(0, address);
   radio.setPALevel(RF24_PA_HIGH); //low?
   radio.startListening();
-
-  gpsSerial.begin(9600);
 }
 
 void loop() {
+  //Serial.println("Radio Available State: " + String(radio.available()));
+  //Serial.println("GPS Available State: " + String(gpsSerial.available()));
+  
   if(radio.available()) {
     double p2Coordinates[2];
+    
     if(gpsSerial.available() > 0) {
       // Read a line from the GPS module
       String line = gpsSerial.readStringUntil('\n');
+      //Serial.println(line);
   
       // Check if the line is a valid NMEA sentence
       if (line.startsWith("$GPGGA")) {
@@ -87,17 +90,20 @@ void loop() {
       
         p1Coordinates[0] = latitude;
         p1Coordinates[1] = longitude;
+
+        radio.read(&p2Coordinates, sizeof(p2Coordinates));
+        targetAngle = angleFromCoordinate(convToRadian(p1Coordinates[0]), convToRadian(p1Coordinates[1]), convToRadian(p2Coordinates[0]), convToRadian(p2Coordinates[1]));
+        Serial.println("Angle: " + String(targetAngle));
       } 
     }
     
-    radio.read(&p2Coordinates, sizeof(p2Coordinates));
+    //radio.read(&p2Coordinates, sizeof(p2Coordinates));
     
-    Serial.println("x1: " + String(p1Coordinates[0]) + ", y1: " + String(p1Coordinates[1]));
-    Serial.println("x2: " + String(p2Coordinates[0]) + ", y2: " + String(p2Coordinates[1]));
+    //Serial.println("x1: " + String(p1Coordinates[0]) + ", y1: " + String(p1Coordinates[1]));
+    //Serial.println("x2: " + String(p2Coordinates[0]) + ", y2: " + String(p2Coordinates[1]));
 
-    targetAngle = angleFromCoordinate(convToRadian(p1Coordinates[0]), convToRadian(p1Coordinates[1]), convToRadian(p2Coordinates[0]), convToRadian(p2Coordinates[1]));
+    //targetAngle = angleFromCoordinate(convToRadian(p1Coordinates[0]), convToRadian(p1Coordinates[1]), convToRadian(p2Coordinates[0]), convToRadian(p2Coordinates[1]));
 
-    Serial.println("Angle: " + String(targetAngle));
-    Serial.println();
+    //Serial.println("Angle: " + String(targetAngle));
   }
 }
