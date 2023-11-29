@@ -50,7 +50,7 @@ void setup() {
 
 void loop() {
   // Read encoder to find current angle
-  control.myInput = (double*)readEncoder();
+  currentAngle = readEncoder();
 
   // Compute the PID output
   control.Compute();
@@ -61,7 +61,7 @@ void loop() {
 
   // Debugging: Print the encoder reading and PID output
   Serial.print("Current Angle: ");
-  Serial.print(*control.myInput);  
+  Serial.print(currentAngle);
   Serial.print(", PID Output: ");
   Serial.println(output);
 
