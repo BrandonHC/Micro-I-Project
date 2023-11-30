@@ -1,0 +1,136 @@
+#include <PID_v1_bc.h>
+#include <Wire.h>
+#include <Adafruit_PWMServoDriver.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <SoftwareSerial.h>
+
+#define MIN_PULSE_WIDTH 500
+#define MAX_PULSE_WIDTH 2500
+#define FREQUENCY 50
+
+uint8_t servo = 0; // Servo Instantiation
+
+// Define pins
+const int encoderPinA = 32;                // Replace with your encoder pin
+const int encoderPinB = 33;                // Replace with your encoder pin
+const int switchPin = 25;                  // define the input pin for the encoder switch
+const int fullRevolutionValue240 = 240;    // Encoder units for one full revolution
+const int fullRevolutionValue360 = 360;    // Degrees in one full revolution
+
+// Encoder parameters
+int encoderPos240 = 0;                    // Encoder position for 240-unit cycle
+int encoderPos360 = 0;                    // Encoder position for 360-degree cycle
+int lastEncoded = 0;
+int switchState = HIGH;
+int lastSwitchState = HIGH;
+
+// PID parameters
+double Kp = 9.0;                    // Proportional constant
+double Ki = 1.0;                    // Integral Constant
+double Kd = 0.0;                    // Derivative Constant
+double targetAngle = 90;            // Target angle
+double currentAngle = 0;            // Current angle from encoder
+double angle;                       // Encoder reading placeholder
+double output = 0;                  // PID output
+
+SemaphoreHandle_t xMutex;
+PID control(&angle, &output, &targetAngle, Kp, Ki, Kd, DIRECT); // PID object
+Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
+
+// GPS variables
+TinyGPSPlus gps;
+SoftwareSerial gpsSerial(0, 1); // RX, TX for GPS module
+
+TaskHandle_t gpsTaskHandle = NULL;
+
+void readGPS(void *pvParameters);
+
+void setup() {
+  pwm.begin();
+  pwm.setPWMFreq(FREQUENCY);
+
+  // Initialize PID controller
+  control.SetMode(AUTOMATIC); // AUTOMATIC
+  control.SetOutputLimits(MIN_PULSE_WIDTH, MAX_PULSE_WIDTH); // PWM output range in us
+
+  pinMode(encoderPinA, INPUT);
+  pinMode(encoderPinB, INPUT);
+  pinMode(switchPin, INPUT_PULLUP); // configure switch pin with an internal pull-up resistor
+
+  xMutex = xSemaphoreCreateMutex();
+
+  // Create a task for reading the encoder
+  xTaskCreatePinnedToCore(
+    readEncoderTask,      // Task function
+    "ReadEncoderTask",    // Name of the task
+    10000,                // Stack size
+    NULL,                 // Task input parameter
+    1,                    // Priority of the task
+    NULL,                 // Task handle
+    0);
+
+  // Create a task for reading GPS
+  xTaskCreatePinnedToCore(
+    readGPS,              // Task function
+    "ReadGPSTask",        // Name of the task
+    10000,                // Stack size
+    NULL,                 // Task input parameter
+    2,                    // Priority of the task
+    &gpsTaskHandle,       // Task handle
+    0);                   // Core number (use core 1)
+  
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Safely read the shared variable
+  xSemaphoreTake(xMutex, portMAX_DELAY);
+  angle = currentAngle;
+  xSemaphoreGive(xMutex);
+  
+  // Compute the PID output
+  control.Compute();
+
+  // Adjust servo speed based on PID output
+  int pcaValue = map(output, 0, 1000000 / FREQUENCY, 0, 4096); 
+  pwm.setPWM(servo, 0, pcaValue);
+
+  // Debugging: Print the encoder reading, PID output, and GPS coordinates
+  Serial.print("Current Angle: ");
+  Serial.print(angle);
+  Serial.print(", PID Output: ");
+  Serial.print(output);
+  Serial.print(", GPS Coordinates: ");
+  Serial.print(gps.location.lat(), 6);
+  Serial.print(", ");
+  Serial.println(gps.location.lng(), 6);
+
+  delay(100);
+}
+
+void readEncoderTask(void *pvParameters) {
+  while (1) {
+    int angle = readEncoder();
+
+    // Acquire mutex and update the shared variable
+    xSemaphoreTake(xMutex, portMAX_DELAY);
+    currentAngle = angle;
+    xSemaphoreGive(xMutex);
+
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+}
+
+void readGPS(void *pvParameters) {
+  while (1) {
+    // Read data from the GPS module
+    while (gpsSerial.available() > 0) {
+      gps.encode(gpsSerial.read());
+    }
+
+    // Additional processing related to GPS can be done here
+
+    vTaskDelay(pdMS_TO_TICKS(1000));
+  }
+}
